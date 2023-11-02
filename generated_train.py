@@ -12,7 +12,11 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
+from transformers import ViTFeatureExtractor, ViTForImageClassification, ViTConfig
+
+from utils.get_dataset import get_dataset
 from backbone.resnet import *
+
 
 def seed_everything(seed):
     random.seed(seed)
@@ -49,169 +53,30 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def get_args():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--dataset', type=str, help='dataset', choices=['cifar10', 'cifar100', 'cub2011', 'dtd', 'oxfordpets', '102flowers', 'eurosat', 'miniimagenet'], default=None)
+    argparser.add_argument('--data_path', type=str, help='data path', default='/home/s20225103/Data_Generation')
+    argparser.add_argument('--data_type', type=str, help='data type', choices=['generated_data', 'origin'], default='generated_data')
     
-
-argparser = argparse.ArgumentParser()
-argparser.add_argument('--dataset', type=str, help='dataset', default=None)
-argparser.add_argument('--epoch', type=int, help='training epoch', default=101)
-argparser.add_argument('--checkpoint_folder', type=str, help='checkpoint save folder', default=None)
-argparser.add_argument('--model_choice', type=int, help='number of layers in the model', default=34)
-argparser.add_argument('--pretrained', type=str2bool, help='use pretrained model or not', default=False)
-argparser.add_argument('--save_every', type=int, help='save point of checkpoints', default=10)
-args = argparser.parse_args()
-print(args)
-
-
-if args.dataset=='cifar10':
-    normalize = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
-    ])
+    argparser.add_argument('--epoch', type=int, help='training epoch', default=101)
+    argparser.add_argument('--checkpoint_folder', type=str, help='checkpoint save folder', default="/home1/s20225168/cvpr2023/checkpoints")
+    argparser.add_argument('--model_choice', type=int, help='number of layers in the model', default=34)
+    argparser.add_argument('--pretrained', type=str2bool, help='use pretrained model or not', default=False)
+    argparser.add_argument('--save_every', type=int, help='save point of checkpoints', default=10)
+    argparser.add_argument('--model_type', type=str, help='model to use', default='Resnet')
+    args = argparser.parse_args()
+    print(args)
     
-    cifar10_dataset_path = "data/cifar10"
-    train_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/generated_data/cifar10', transform = normalize)
-    test_dataset = torchvision.datasets.CIFAR10(root=cifar10_dataset_path, train=False, download=True, transform = normalize)
-    
-    print(len(train_dataset))
-    print(len(test_dataset))   
-
-    net = ResNet(pre_trained=args.pretrained, n_class=10, model_choice = args.model_choice)
-
-if args.dataset=='cifar100':
-    normalize = transforms.Compose([
-        transforms.ToTensor(),
-       transforms.Normalize([0.5071, 0.4867, 0.4408], [0.2675, 0.2565, 0.2761])
-    ])
-    
-    cifar100_dataset_path = "data/cifar100"
-    train_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/generated_data/cifar100', transform = normalize)
-    test_dataset = torchvision.datasets.CIFAR100(root=cifar100_dataset_path, train=False, download=True, transform = normalize)
-
-    print(len(train_dataset))
-    print(len(test_dataset))
-
-    net = ResNet(pre_trained=args.pretrained, n_class=100, model_choice = args.model_choice)
-
-if args.dataset=='cub2011':
-    normalize = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.48562077, 0.49943104, 0.43238935], [0.17436638, 0.1736659, 0.18543857])
-    ])
-    
-    train_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/generated_data/cub2011', transform = normalize)
-    test_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/data/CUB_200_2011/test', transform = normalize)
-    print(len(train_dataset))
-
-    net = ResNet(pre_trained=args.pretrained, n_class=200, model_choice = args.model_choice)
-
-if args.dataset=='dtd':
-    normalize = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.5342086, 0.47681832, 0.42735654], [0.1527844, 0.15404493, 0.14999966])
-    ])
-    
-    train_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/generated_data/dtd', transform = normalize)
-    test_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/data/DTD/test', transform = normalize)
-    print(len(train_dataset))
-
-    class_name = train_dataset.classes
-    class_name = [cls_name.lower() for cls_name in class_name]
-    print(class_name)
-    print(len(class_name))
-
-    net = ResNet(pre_trained=args.pretrained, n_class=len(class_name), model_choice = args.model_choice)
-
-if args.dataset=='oxfordpets':
-    normalize = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.48043793, 0.44833282, 0.39613166], [0.23136571, 0.22845998, 0.23037408])
-    ])
-    
-    train_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/generated_data/oxfordpets', transform = normalize)
-    test_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/data/oxfordpets/test', transform = normalize)
-
-    print(len(train_dataset))
-
-    class_name = train_dataset.classes
-    class_name = [cls_name.lower() for cls_name in class_name]
-    print(class_name)
-    print(len(class_name))
-
-    net = ResNet(pre_trained=args.pretrained, n_class=len(class_name), model_choice = args.model_choice)
-
-if args.dataset=='102flowers':
-    normalize = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.5144969, 0.4092727, 0.3269492], [0.2524271, 0.20233019, 0.20998113])
-    ])
-    
-    train_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/generated_data/102flowers', transform = normalize)
-    test_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/data/102flowers/test', transform = normalize)
-    print(len(train_dataset))
-
-    class_name = train_dataset.classes
-    class_name = [cls_name.lower() for cls_name in class_name]
-    print(class_name)
-    print(len(class_name))
-
-    net = ResNet(pre_trained=args.pretrained, n_class=len(class_name), model_choice = args.model_choice)    
-
-if args.dataset=='eurosat':
-    normalize = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.3444887, 0.38034907, 0.40781093], [0.0900263, 0.061832733, 0.051150024])
-    ])
-    
-    train_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/generated_data/eurosat', transform = normalize)
-    test_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/data/eurosat/test', transform = normalize)
-    print(len(train_dataset))
-
-    class_name = train_dataset.classes
-    class_name = [cls_name.lower() for cls_name in class_name]
-    print(class_name)
-    print(len(class_name))
-
-    net = ResNet(pre_trained=args.pretrained, n_class=len(class_name), model_choice = args.model_choice)   
-
-if args.dataset=='miniimagenet':
-    normalize = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.4733471, 0.44912496, 0.4034593], [0.22521427, 0.2207067, 0.22094156])
-    ])
-    
-    train_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/generated_data/miniimagenet', transform = normalize)
-    test_dataset = torchvision.datasets.ImageFolder(root = '/home/s20225103/Data_Generation/data/miniimagenet/test', transform = normalize)
-    print(len(train_dataset))
-
-    class_name = train_dataset.classes
-    class_name = [cls_name.lower() for cls_name in class_name]
-    print(class_name)
-    print(len(class_name))
-
-    net = ResNet(pre_trained=args.pretrained, n_class=len(class_name), model_choice = args.model_choice)
-    
-train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-
-if torch.cuda.is_available():
-    device = 'cuda'
-    print(device)
-else:
-    device = 'cpu'
-    print(device)
+    return args
 
 
-def train(net, num_epochs, train_dataloader, test_dataloader, device, checkpoint_folder, save_every, lr_low= 1e-7, lr_high=1*1e-5):
+def train(model, num_epochs, train_dataloader, test_dataloader, device, checkpoint_folder, save_every, lr_low= 1e-7, lr_high=1*1e-5):
     seed_everything(42)
     start_time = datetime.datetime.now()
-    
+    loss = None
     
     criterion = nn.CrossEntropyLoss()
     '''
@@ -223,7 +88,7 @@ def train(net, num_epochs, train_dataloader, test_dataloader, device, checkpoint
     '''
     exp_num = 2
     '''
-    optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
     '''
@@ -233,7 +98,7 @@ def train(net, num_epochs, train_dataloader, test_dataloader, device, checkpoint
     #lrs = get_triangular_lr(lr_low, lr_high, iterations)
     
     for epoch in range(num_epochs):  
-        net = net.to(device)
+        model = model.to(device)
         epoch_loss = 0.0
         running_loss = 0.0
         
@@ -244,7 +109,7 @@ def train(net, num_epochs, train_dataloader, test_dataloader, device, checkpoint
         correct_tr = 0
         total_tr = 0
         for i, data in enumerate(train_dataloader):
-            #optimizer = get_optimizer(net, lr = lrs[i], wd =0)
+            #optimizer = get_optimizer(model, lr = lrs[i], wd =0)
 
             inputs, labels = data
             inputs = inputs.to(device)
@@ -252,8 +117,11 @@ def train(net, num_epochs, train_dataloader, test_dataloader, device, checkpoint
 
             optimizer.zero_grad()
 
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
+            outputs = model(inputs)
+            if args.model_type == "Resnet":
+                loss = criterion(outputs, labels)
+            elif args.model_type == "ViT":
+                loss = criterion(outputs.logits, labels)
             
             loss.backward()
             optimizer.step()
@@ -271,7 +139,7 @@ def train(net, num_epochs, train_dataloader, test_dataloader, device, checkpoint
             torch.save(
                 {
                     "epoch": epoch,
-                    "model_state_dict": net.state_dict(),
+                    "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "loss": epoch_loss,
                 },
@@ -285,8 +153,11 @@ def train(net, num_epochs, train_dataloader, test_dataloader, device, checkpoint
                 images, labels = data
                 images = images.to(device)
                 labels = labels.to(device)
-                outputs = net(images)
-                _, predicted = torch.max(outputs, 1)
+                outputs = model(images)
+                if args.model_type == "Resnet":
+                    _, predicted = torch.max(outputs, 1)
+                elif args.model_type == "ViT":
+                    _, predicted = torch.max(outputs.logits, 1)
                 total_te += labels.size(0)
                 correct_te += (predicted == labels).sum().item()
         
@@ -294,5 +165,57 @@ def train(net, num_epochs, train_dataloader, test_dataloader, device, checkpoint
 
     total_minutes = (datetime.datetime.now() - start_time).total_seconds() / 60.0
     print("Finished training in %.2f minutes" % total_minutes)
+    
+    
 
-train(net, args.epoch, train_dataloader, test_dataloader, device, args.checkpoint_folder, args.save_every)
+def get_model(args, n_classes):
+    
+    model = None
+    n_class = 10
+    
+    if args.model_type == "Resnet":
+        model = ResNet(pre_trained=args.pretrained, n_class=n_classes, model_choice = args.model_choice)
+
+    elif args.model_type == "ViT":
+        if args.pretrained:
+            model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224-in21k')
+            
+            new_classifier = nn.Sequential(
+                nn.Linear(model.config.hidden_size, 512),
+                nn.ReLU(),
+                nn.Linear(512, n_classes)
+            )
+            model.classifier = new_classifier
+
+        else:
+            feature_extractor = ViTFeatureExtractor(model_type='vit-base-patch16-224')
+            config = ViTConfig.from_pretrained("google/vit-base-patch16-224", num_labels=n_classes)
+            
+            # 이미지 분류를 위한 ViT 모델 생성
+            model = ViTForImageClassification(config=config)
+
+            # 이제 미리 학습된 모델을 로드하기 전에 구성(configuration)에서 레이블 수를 설정할 수 있습니다.
+            model.config.num_labels = n_classes
+
+    return model
+
+
+
+if __name__ == "__main__":
+    
+    # Bring args
+    args = get_args()
+    
+    # Set device
+    if torch.cuda.is_available():
+        device = 'cuda'
+        print(device)
+    else:
+        device = 'cpu'
+        print(device)
+    
+    train_dataloader, test_dataloader, n_classes = get_dataset(args)
+    model = get_model(args, n_classes)
+    
+    train(model, args.epoch, train_dataloader, test_dataloader, device, args.checkpoint_folder, args.save_every)
+
