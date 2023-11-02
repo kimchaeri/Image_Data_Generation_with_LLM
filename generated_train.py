@@ -14,9 +14,9 @@ from torch.utils.data import DataLoader
 
 from transformers import ViTFeatureExtractor, ViTForImageClassification, ViTConfig
 
+from utils.args import get_args
 from utils.get_dataset import get_dataset
 from backbone.resnet import *
-
 
 def seed_everything(seed):
     random.seed(seed)
@@ -43,34 +43,6 @@ def get_triangular_lr(lr_low, lr_high, iterations):
     delta2 = (lrs2[-1] - lr_low)/(iter3)
     lrs3 = [lrs2[-1] - i*(delta2) for i in range(1, iter3+1)]
     return lrs1+lrs2+lrs3
-
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
-def get_args():
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('--dataset', type=str, help='dataset', choices=['cifar10', 'cifar100', 'cub2011', 'dtd', 'oxfordpets', '102flowers', 'eurosat', 'miniimagenet'], default=None)
-    argparser.add_argument('--data_path', type=str, help='data path', default='/home/s20225103/Data_Generation')
-    argparser.add_argument('--data_type', type=str, help='data type', choices=['generated_data', 'origin'], default='generated_data')
-    
-    argparser.add_argument('--epoch', type=int, help='training epoch', default=101)
-    argparser.add_argument('--checkpoint_folder', type=str, help='checkpoint save folder', default="/home1/s20225168/cvpr2023/checkpoints")
-    argparser.add_argument('--model_choice', type=int, help='number of layers in the model', default=34)
-    argparser.add_argument('--pretrained', type=str2bool, help='use pretrained model or not', default=False)
-    argparser.add_argument('--save_every', type=int, help='save point of checkpoints', default=10)
-    argparser.add_argument('--model_type', type=str, help='model to use', default='Resnet')
-    args = argparser.parse_args()
-    print(args)
-    
-    return args
 
 
 def train(model, num_epochs, train_dataloader, test_dataloader, device, checkpoint_folder, save_every, lr_low= 1e-7, lr_high=1*1e-5):

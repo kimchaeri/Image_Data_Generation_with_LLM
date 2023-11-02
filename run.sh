@@ -1,0 +1,1 @@
+python generated_train.py --data_path '/home/s20225103/Data_Generation' --dataset 'cifar10' --epoch 101 --model_type 'ViT' --data_type 'generated_data'
