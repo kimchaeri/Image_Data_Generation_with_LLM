@@ -94,9 +94,7 @@ def get_dataset(args):
             transforms.ToTensor(),
             transforms.Normalize([0.4733471, 0.44912496, 0.4034593], [0.22521427, 0.2207067, 0.22094156])
         ])
-    
-    breakpoint()
-    
+        
     if train_dataset is None:
         train_dataset = torchvision.datasets.ImageFolder(root = train_data_path, transform = normalize)
     if test_dataset is None:
