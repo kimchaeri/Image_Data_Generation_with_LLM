@@ -25,6 +25,8 @@ def get_dataset(args):
     
     if args.data_type == "generated_data":
         train_data_path = os.path.join(args.data_path, args.data_type, args.dataset)
+    elif args.data_type == "augmented_data":
+        train_data_path = os.path.join(args.data_path, args.data_type, args.dataset)
     elif args.data_type == "origin":
         train_data_path = os.path.join(args.data_path, "data", args.dataset, 'train')
     test_data_path = os.path.join(args.data_path, "data", args.dataset, 'test')
@@ -42,8 +44,9 @@ def get_dataset(args):
 
     elif args.dataset=='cifar100':
         normalize = transforms.Compose([
+            transforms.Resize((224, 224)),
             transforms.ToTensor(),
-        transforms.Normalize([0.5071, 0.4867, 0.4408], [0.2675, 0.2565, 0.2761])
+            transforms.Normalize([0.5071, 0.4867, 0.4408], [0.2675, 0.2565, 0.2761])
         ])
         cifar100_dataset_path = "data/cifar100"
         if args.data_type == 'origin':
@@ -104,8 +107,8 @@ def get_dataset(args):
     class_name = [cls_name.lower() for cls_name in class_name]
     n_classes = len(class_name)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True)
     
     print(len(train_dataset))
     print(class_name)

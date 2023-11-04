@@ -13,6 +13,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 from transformers import ViTFeatureExtractor, ViTForImageClassification, ViTConfig
+from transformers import CLIPProcessor, CLIPModel
 
 from utils.args import get_args
 from utils.get_dataset import get_dataset
@@ -45,7 +46,7 @@ def get_triangular_lr(lr_low, lr_high, iterations):
     return lrs1+lrs2+lrs3
 
 
-def train(model, num_epochs, train_dataloader, test_dataloader, device, checkpoint_folder, save_every, lr_low= 1e-7, lr_high=1*1e-5):
+def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, lr_high=1*1e-5):
     seed_everything(42)
     start_time = datetime.datetime.now()
     loss = None
@@ -60,7 +61,7 @@ def train(model, num_epochs, train_dataloader, test_dataloader, device, checkpoi
     '''
     exp_num = 2
     '''
-    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, weight_decay=5e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
     '''
@@ -69,12 +70,16 @@ def train(model, num_epochs, train_dataloader, test_dataloader, device, checkpoi
     #iterations = num_epochs*len(train_dataloader)
     #lrs = get_triangular_lr(lr_low, lr_high, iterations)
     
-    for epoch in range(num_epochs):  
+    for epoch in range(args.epoch):  
         model = model.to(device)
         epoch_loss = 0.0
         running_loss = 0.0
         
-        checkpoints_dir = os.path.join("checkpoints", checkpoint_folder)
+        folder_name = args.data_type + "_" + args.dataset
+        if args.pretrained:
+            folder_name = folder_name + "_pretrained"
+        checkpoints_dir = os.path.join(args.checkpoint_folder, folder_name)
+        
         if not os.path.exists(checkpoints_dir):
             os.makedirs(checkpoints_dir)
 
@@ -106,7 +111,7 @@ def train(model, num_epochs, train_dataloader, test_dataloader, device, checkpoi
                 epoch_loss += running_loss
                 running_loss = 0.0
         
-        if epoch % save_every == 0:
+        if epoch % args.save_every == 0:
             checkpoint_name = "-".join(["checkpoint", str(epoch) + ".pt"])
             torch.save(
                 {
@@ -141,9 +146,7 @@ def train(model, num_epochs, train_dataloader, test_dataloader, device, checkpoi
     
 
 def get_model(args, n_classes):
-    
     model = None
-    n_class = 10
     
     if args.model_type == "Resnet":
         model = ResNet(pre_trained=args.pretrained, n_class=n_classes, model_choice = args.model_choice)
@@ -151,7 +154,6 @@ def get_model(args, n_classes):
     elif args.model_type == "ViT":
         if args.pretrained:
             model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224-in21k')
-            
             new_classifier = nn.Sequential(
                 nn.Linear(model.config.hidden_size, 512),
                 nn.ReLU(),
@@ -160,14 +162,20 @@ def get_model(args, n_classes):
             model.classifier = new_classifier
 
         else:
-            feature_extractor = ViTFeatureExtractor(model_type='vit-base-patch16-224')
             config = ViTConfig.from_pretrained("google/vit-base-patch16-224", num_labels=n_classes)
-            
-            # 이미지 분류를 위한 ViT 모델 생성
             model = ViTForImageClassification(config=config)
-
-            # 이제 미리 학습된 모델을 로드하기 전에 구성(configuration)에서 레이블 수를 설정할 수 있습니다.
             model.config.num_labels = n_classes
+
+
+    elif args.model_type == "CLIP_ViT":
+        if args.pretrained:
+            model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
+            new_classifier = nn.Sequential(
+                nn.Linear(model.config.hidden_size, 512),
+                nn.ReLU(),
+                nn.Linear(512, n_classes)
+            )
+            model.classifier = new_classifier
 
     return model
 
@@ -189,5 +197,5 @@ if __name__ == "__main__":
     train_dataloader, test_dataloader, n_classes = get_dataset(args)
     model = get_model(args, n_classes)
     
-    train(model, args.epoch, train_dataloader, test_dataloader, device, args.checkpoint_folder, args.save_every)
+    train(args, model, train_dataloader, test_dataloader, device)
 
