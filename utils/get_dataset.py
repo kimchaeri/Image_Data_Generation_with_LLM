@@ -10,25 +10,25 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 
 from transformers import ViTFeatureExtractor, ViTForImageClassification
 from backbone.resnet import *
 
-
 def get_dataset(args):
     # Class for the task
     n_classes = 0
+    class_name = []
     normalize = None
     train_data_path, test_data_path = '', ''
-    train_dataset, test_dataset = None, None
+    origin_dataset, train_dataset, test_dataset = None, None, None
     
     if args.data_type == "generated_data":
         train_data_path = os.path.join(args.data_path, args.data_type, args.dataset)
-    elif args.data_type == "augmented_data":
-        train_data_path = os.path.join(args.data_path, args.data_type, args.dataset)
     elif args.data_type == "origin":
         train_data_path = os.path.join(args.data_path, "data", args.dataset, 'train')
+    elif args.data_type == "augmented_data":
+        train_data_path = [os.path.join(args.data_path, "origin", args.dataset), os.path.join(args.data_path, "generated_data", args.dataset)]
     test_data_path = os.path.join(args.data_path, "data", args.dataset, 'test')
     
     if args.dataset=='cifar10':
@@ -38,8 +38,9 @@ def get_dataset(args):
                     transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
                 ])
         cifar10_dataset_path = "data/cifar10"
-        if args.data_type == 'origin':
+        if args.data_type == 'origin' or args.data_type == "augmented_data":
             train_dataset = torchvision.datasets.CIFAR10(root=cifar10_dataset_path, train=True, download=True, transform=normalize)
+
         test_dataset = torchvision.datasets.CIFAR10(root=cifar10_dataset_path, train=False, download=True, transform = normalize)
 
     elif args.dataset=='cifar100':
@@ -49,7 +50,7 @@ def get_dataset(args):
             transforms.Normalize([0.5071, 0.4867, 0.4408], [0.2675, 0.2565, 0.2761])
         ])
         cifar100_dataset_path = "data/cifar100"
-        if args.data_type == 'origin':
+        if args.data_type == 'origin' or args.data_type == "augmented_data":
             train_dataset = torchvision.datasets.CIFAR10(root=cifar100_dataset_path, train=True, download=True, transform=normalize)
         test_dataset = torchvision.datasets.CIFAR100(root=cifar100_dataset_path, train=False, download=True, transform = normalize)
 
@@ -98,22 +99,34 @@ def get_dataset(args):
             transforms.Normalize([0.4733471, 0.44912496, 0.4034593], [0.22521427, 0.2207067, 0.22094156])
         ])
         
-    if train_dataset is None:
-        train_dataset = torchvision.datasets.ImageFolder(root = train_data_path, transform = normalize)
-    if test_dataset is None:
-        test_dataset = torchvision.datasets.ImageFolder(root = test_data_path, transform = normalize)
-
-    class_name = train_dataset.classes
+    if args.data_type == "augmented_data":
+        if train_dataset is None:
+            origin_dataset = torchvision.datasets.ImageFolder(root = train_data_path[0], transform = normalize)
+        else:
+            origin_dataset = train_dataset
+        generated_dataset = torchvision.datasets.ImageFolder(root = train_data_path[1], transform = normalize)
+        train_dataset = ConcatDataset([origin_dataset, generated_dataset])
+        class_name = origin_dataset.classes
+    else:
+        if train_dataset is None:
+            train_dataset = torchvision.datasets.ImageFolder(root = train_data_path, transform = normalize)
+        if test_dataset is None:
+            test_dataset = torchvision.datasets.ImageFolder(root = test_data_path, transform = normalize)
+        class_name = train_dataset.classes
+    
     class_name = [cls_name.lower() for cls_name in class_name]
     n_classes = len(class_name)
 
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True)
     
-    print(len(train_dataset))
+    if args.data_type == "augmented_data":
+        print("num of original dataset = ", len(origin_dataset))
+        print("num of generated dataset = ", len(generated_dataset))
+    print("num of total dataset = ", len(train_dataset))
     print(class_name)
     print(len(class_name))
-    
+
     return train_dataloader, test_dataloader, n_classes
 
 

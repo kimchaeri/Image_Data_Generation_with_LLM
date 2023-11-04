@@ -12,7 +12,7 @@ def str2bool(v):
 
 def get_args():
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--dataset', type=str, help='dataset', choices=['cifar10', 'cifar100', 'CUB_200_2011', 'DTD', 'oxfordpets', '102flowers', 'eurosat', 'miniimagenet', 'food101'], default=None)
+    argparser.add_argument('--dataset', type=str, help='dataset', choices=['cifar10', 'cifar100', 'cub2011', 'dtd', 'oxfordpets', '102flowers', 'eurosat', 'miniimagenet', 'food101'], default=None)
     argparser.add_argument('--data_path', type=str, help='data path', default='/home/s20225103/Data_Generation')
     argparser.add_argument('--data_type', type=str, help='data type', choices=['generated_data', 'origin', 'augmented_data'], default='generated_data')
     
