@@ -61,7 +61,7 @@ def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, 
     '''
     exp_num = 2
     '''
-    optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(model.parameters(), lr=1e-5, momentum=0.9, weight_decay=5e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
     '''
