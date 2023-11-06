@@ -21,15 +21,19 @@ def get_dataset(args):
     class_name = []
     normalize = None
     train_data_path, test_data_path = '', ''
-    origin_dataset, train_dataset, test_dataset = None, None, None
+    origin_dataset = None
+    train_dataset = None
+    test_dataset = None
     
     if args.data_type == "generated_data":
         train_data_path = os.path.join(args.data_path, args.data_type, args.dataset)
     elif args.data_type == "origin":
         train_data_path = os.path.join(args.data_path, "data", args.dataset, 'train')
     elif args.data_type == "augmented_data":
-        train_data_path = [os.path.join(args.data_path, "origin", args.dataset), os.path.join(args.data_path, "generated_data", args.dataset)]
+        train_data_path = [os.path.join(args.data_path, "data", args.dataset, 'train'), os.path.join(args.data_path, "generated_data", args.dataset)]
     test_data_path = os.path.join(args.data_path, "data", args.dataset, 'test')
+    
+    print(test_data_path)
     
     if args.dataset=='cifar10':
         normalize = transforms.Compose([
@@ -98,27 +102,28 @@ def get_dataset(args):
             transforms.ToTensor(),
             transforms.Normalize([0.4733471, 0.44912496, 0.4034593], [0.22521427, 0.2207067, 0.22094156])
         ])
-        
+    
     if args.data_type == "augmented_data":
         if train_dataset is None:
             origin_dataset = torchvision.datasets.ImageFolder(root = train_data_path[0], transform = normalize)
         else:
             origin_dataset = train_dataset
         generated_dataset = torchvision.datasets.ImageFolder(root = train_data_path[1], transform = normalize)
-        train_dataset = ConcatDataset([origin_dataset, generated_dataset])
         class_name = origin_dataset.classes
+        train_dataset = origin_dataset +  generated_dataset
     else:
         if train_dataset is None:
             train_dataset = torchvision.datasets.ImageFolder(root = train_data_path, transform = normalize)
-        if test_dataset is None:
-            test_dataset = torchvision.datasets.ImageFolder(root = test_data_path, transform = normalize)
         class_name = train_dataset.classes
+
+    if test_dataset is None:
+        test_dataset = torchvision.datasets.ImageFolder(root = test_data_path, transform = normalize)
     
     class_name = [cls_name.lower() for cls_name in class_name]
     n_classes = len(class_name)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=True)
     
     if args.data_type == "augmented_data":
         print("num of original dataset = ", len(origin_dataset))
@@ -126,7 +131,7 @@ def get_dataset(args):
     print("num of total dataset = ", len(train_dataset))
     print(class_name)
     print(len(class_name))
-
+    
     return train_dataloader, test_dataloader, n_classes
 
 

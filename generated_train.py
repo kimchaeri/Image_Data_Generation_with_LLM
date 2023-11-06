@@ -87,7 +87,6 @@ def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, 
         total_tr = 0
         for i, data in enumerate(train_dataloader):
             #optimizer = get_optimizer(model, lr = lrs[i], wd =0)
-
             inputs, labels = data
             inputs = inputs.to(device)
             labels = labels.to(device)
