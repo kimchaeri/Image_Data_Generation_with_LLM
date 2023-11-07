@@ -55,7 +55,7 @@ def get_dataset(args):
         ])
         cifar100_dataset_path = "data/cifar100"
         if args.data_type == 'origin' or args.data_type == "augmented_data":
-            train_dataset = torchvision.datasets.CIFAR10(root=cifar100_dataset_path, train=True, download=True, transform=normalize)
+            train_dataset = torchvision.datasets.CIFAR100(root=cifar100_dataset_path, train=True, download=True, transform=normalize)
         test_dataset = torchvision.datasets.CIFAR100(root=cifar100_dataset_path, train=False, download=True, transform = normalize)
 
     elif args.dataset=='cub2011':
@@ -122,8 +122,8 @@ def get_dataset(args):
     class_name = [cls_name.lower() for cls_name in class_name]
     n_classes = len(class_name)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
     
     if args.data_type == "augmented_data":
         print("num of original dataset = ", len(origin_dataset))
