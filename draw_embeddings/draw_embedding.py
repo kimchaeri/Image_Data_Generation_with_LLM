@@ -16,3 +16,4 @@ if __name__ == "__main__":
     image_folders, labels = get_img_folders(args)
     
     draw_images(args, model, feature_extractor, image_folders, labels)
+    

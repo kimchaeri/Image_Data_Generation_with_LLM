@@ -76,7 +76,9 @@ def draw_images(args, model, feature_extractor, image_folders, labels):
     if args.pca:
         pca = PCA(n_components=2)
         reduced_features = pca.fit_transform(features_array)
-
+        
+        avg_poses = []
+        distances = []
         plt.title("2D Embedding of Images using ViT and PCA")
         plt.figure(figsize=(8, 6))
         for i, num_image in enumerate(save_num_images):
@@ -84,15 +86,32 @@ def draw_images(args, model, feature_extractor, image_folders, labels):
                 continue
             else:
                 plt.scatter(reduced_features[save_num_images[i-1]:save_num_images[i], 0], reduced_features[save_num_images[i-1]:save_num_images[i], 1], color=colors[i-1], label=labels[i-1])
+                output_list = [sum(inner_list) / len(inner_list) for inner_list in zip(*reduced_features[save_num_images[i-1]:save_num_images[i]])]
+                avg_poses.append(output_list)
+
+        for i, avg_pos in enumerate(avg_poses):
+            if i == 0:
+                continue
+            else:
+                distance = np.sqrt((avg_poses[0][0] - avg_pos[0])**2 + (avg_poses[0][1] - avg_pos[1])**2)
+                text = labels[0] + " - " + labels[i] + " = " + str(distance)
+                distances.append(text)
+
         plt.legend()
         plt.savefig(os.path.join(args.dst_path, args.file_name + "_pca.png"))
         plt.show()
+        f= open(os.path.join(args.dst_path, args.file_name + "_pca.txt"),"w+")
+        for distance in distances:
+            f.write(distance + "\n")
+        
 
 
     if args.tsne:
         tsne = TSNE(n_components=2, perplexity=args.perplexity, random_state=42)
         reduced_features = tsne.fit_transform(features_array)
 
+        avg_poses = []
+        distances = []
         plt.figure(figsize=(8, 6))
         plt.title('t-SNE 2D Embedding')
         for i, num_image in enumerate(save_num_images):
@@ -100,7 +119,21 @@ def draw_images(args, model, feature_extractor, image_folders, labels):
                 continue
             else:
                 plt.scatter(reduced_features[save_num_images[i-1]:save_num_images[i], 0], reduced_features[save_num_images[i-1]:save_num_images[i], 1], color=colors[i-1], label=labels[i-1])
+                output_list = [sum(inner_list) / len(inner_list) for inner_list in zip(*reduced_features[save_num_images[i-1]:save_num_images[i]])]
+                avg_poses.append(output_list)
+                
+        for i, avg_pos in enumerate(avg_poses):
+            if i == 0:
+                continue
+            else:
+                distance = np.sqrt((avg_poses[0][0] - avg_pos[0])**2 + (avg_poses[0][1] - avg_pos[1])**2)
+                text = labels[0] + " - " + labels[i] + " = " + str(distance)
+                distances.append(text)
+                
         plt.legend()
         plt.savefig(os.path.join(args.dst_path, args.file_name + "_tsne.png"))
         plt.show()
+        f= open(os.path.join(args.dst_path, args.file_name + "_tsne.txt"),"w+")
+        for distance in distances:
+            f.write(distance + "\n")
 
