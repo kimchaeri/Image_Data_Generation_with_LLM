@@ -46,7 +46,6 @@ def draw_images(args, model, feature_extractor, image_folders, labels):
     features = []
     save_num_images = [0]
     num_images = 0
-    
     for image_folder in image_folders:
         for filename in os.listdir(image_folder):
             image_path = os.path.join(image_folder, filename)

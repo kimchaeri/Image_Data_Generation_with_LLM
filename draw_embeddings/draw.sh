@@ -4,7 +4,7 @@
 
 #PBS -N G1C4_BJY_embeddings
 
-#PBS -q pleiades3
+#PBS -q pleiades1
 
 #PBS -r n 
 
@@ -14,4 +14,4 @@ source activate cvpr
 
 cd /home1/s20225168/cvpr2023/Image_Data_Generation_with_LLM/draw_embeddings
 
-python draw_embedding.py --path_txt "./image_paths.txt" --dst_path "./embedding_images" --tsne --file_name "embedding" --perplexity 5
+python draw_embedding.py --path_txt "./image_paths.txt" --dst_path "./embedding_images" --tsne --file_name "embedding_1126"

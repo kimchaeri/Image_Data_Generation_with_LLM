@@ -10,7 +10,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+
 from torch.utils.data import DataLoader
+from torchvision.transforms.autoaugment import AutoAugment, AutoAugmentPolicy, RandAugment
 
 from transformers import ViTFeatureExtractor, ViTForImageClassification, ViTConfig
 from transformers import CLIPProcessor, CLIPModel
@@ -28,7 +30,7 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True  # type: ignore
     torch.backends.cudnn.benchmark = True  # type: ignore
 
-def get_optimizer(model, lr = 0.01, wd = 0.0):
+def get_optimizer(model, lr = 0.01, wd = 1e-4):
     parameters = filter(lambda p: p.requires_grad, model.parameters())
     optim = torch.optim.Adam(parameters, lr=lr, weight_decay=wd)
     return optim
@@ -61,7 +63,7 @@ def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, 
     '''
     exp_num = 2
     '''
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
     '''
@@ -69,7 +71,10 @@ def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, 
     '''
     #iterations = num_epochs*len(train_dataloader)
     #lrs = get_triangular_lr(lr_low, lr_high, iterations)
-    
+    if args.aug_strategy == "AA":
+        aug_policy = AutoAugmentPolicy("cifar10")
+        auto_aug = AutoAugment(aug_policy)
+        
     for epoch in range(args.epoch):  
         model = model.to(device)
         epoch_loss = 0.0
@@ -83,15 +88,28 @@ def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, 
         if not os.path.exists(checkpoints_dir):
             os.makedirs(checkpoints_dir)
 
-        correct_tr = 0
-        total_tr = 0
         for i, data in enumerate(train_dataloader):
+            if not args.data_num == 0:
+                print("It is few shot learning..")
+                num_data = 3 + args.data_num
+                data[0] = data[0][num_data]
+                data[1] = data[1][num_data]
+                print("Check you are only train with ", num_data, " data.")
+                breakpoint()
+                
             #optimizer = get_optimizer(model, lr = lrs[i], wd =0)
             inputs, labels = data
             inputs = inputs.to(device)
             labels = labels.to(device)
 
             optimizer.zero_grad()
+            #if args.aug_strategy == "AA":
+            #    image_tensor_uint8 = (inputs * 255).to(torch.uint8)
+            #    image_tensor_uint8 = auto_aug(image_tensor_uint8)
+            #    inputs = image_tensor_uint8.float() / 255.0
+
+            # if args.aug_strategy == "AA":
+                # inputs = auto_aug(inputs)
 
             outputs = model(inputs)
             if args.model_type == "Resnet":
@@ -148,7 +166,7 @@ def get_model(args, n_classes):
     model = None
     
     if args.model_type == "Resnet":
-        model = ResNet(pre_trained=args.pretrained, n_class=n_classes, model_choice = args.model_choice)
+        model = ResNet(args, n_class=n_classes)
 
     elif args.model_type == "ViT":
         if args.pretrained:
@@ -193,8 +211,7 @@ if __name__ == "__main__":
         device = 'cpu'
         print(device)
     
-    train_dataloader, test_dataloader, n_classes = get_dataset(args)
+    train_dataloader, test_dataloader, n_classes, class_name = get_dataset(args)
     model = get_model(args, n_classes)
     
     train(args, model, train_dataloader, test_dataloader, device)
-

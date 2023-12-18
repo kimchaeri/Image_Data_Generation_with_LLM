@@ -1,5 +1,5 @@
 source : 
 /home/s20225103/Data_Generation/data/oxfordpets/train/Abyssinian/ origin
 targets : 
-/home1/s20225168/cvpr2023/Image_Data_Generation_with_LLM/prompt_tuning/results/oxfordpets_non_llms/1/A/Abyssinian label1
-/home1/s20225168/cvpr2023/Image_Data_Generation_with_LLM/prompt_tuning/results/oxfordpets_non_llms/1/Create/Abyssinian label2
+/home1/s20225168/cvpr2023/Image_Data_Generation_with_LLM/finetune/results SDXL-finetuned-p4
+/data5/Data_Generation/gen_data/oxfordpets/Abyssinian SDXL-p4
