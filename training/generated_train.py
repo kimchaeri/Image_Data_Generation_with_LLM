@@ -89,14 +89,6 @@ def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, 
             os.makedirs(checkpoints_dir)
 
         for i, data in enumerate(train_dataloader):
-            if not args.data_num == 0:
-                print("It is few shot learning..")
-                num_data = 3 + args.data_num
-                data[0] = data[0][num_data]
-                data[1] = data[1][num_data]
-                print("Check you are only train with ", num_data, " data.")
-                breakpoint()
-                
             #optimizer = get_optimizer(model, lr = lrs[i], wd =0)
             inputs, labels = data
             inputs = inputs.to(device)
