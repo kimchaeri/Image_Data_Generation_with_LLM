@@ -51,6 +51,24 @@ def get_dataset(args):
     elif type(train_data_path) == list:
         origin_dataset = torchvision.datasets.ImageFolder(root = train_data_path[0], transform = train_transform)
         generated_dataset = torchvision.datasets.ImageFolder(root = train_data_path[1], transform = train_transform)
+        if not args.data_num == 0:
+            print("It is few shot learning..")
+            del_list = []
+            cur_class_idx = 0
+            check_idx = 0
+            count_data_num = 1
+            for i, data in enumerate(generated_dataset):
+                cur_class_idx = data[1]
+                if cur_class_idx != check_idx:
+                    check_idx = cur_class_idx
+                    count_data_num = 1
+                if count_data_num > args.data_num and cur_class_idx == check_idx:
+                    del_list.append(generated_dataset.imgs[i])
+                else:
+                    count_data_num += 1
+            for data in del_list:
+                generated_dataset.imgs.remove(data)
+
         train_dataset = ConcatDataset([origin_dataset, generated_dataset])
     
     # Get test dataset
