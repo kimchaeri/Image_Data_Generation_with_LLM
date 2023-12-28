@@ -19,7 +19,10 @@ from transformers import CLIPProcessor, CLIPModel
 
 from utils.args import get_args
 from utils.get_dataset import get_dataset
+from utils.utils import *
 from backbone.resnet import *
+from backbone.wide_resnet import *
+from torch.nn.parallel import DataParallel
 
 def seed_everything(seed):
     random.seed(seed)
@@ -30,53 +33,33 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True  # type: ignore
     torch.backends.cudnn.benchmark = True  # type: ignore
 
-def get_optimizer(model, lr = 0.01, wd = 1e-4):
-    parameters = filter(lambda p: p.requires_grad, model.parameters())
-    optim = torch.optim.Adam(parameters, lr=lr, weight_decay=wd)
-    return optim
-
-def get_triangular_lr(lr_low, lr_high, iterations):
-    iter1 = int(0.35*iterations)
-    iter2 = int(0.85*iter1)
-    iter3 = iterations - iter1 - iter2
-    delta1 = (lr_high - lr_low)/iter1
-    delta2 = (lr_high - lr_low)/(iter1 -1)
-    lrs1 = [lr_low + i*delta1 for i in range(iter1)]
-    lrs2 = [lr_high - i*(delta1) for i in range(0, iter2)]
-    delta2 = (lrs2[-1] - lr_low)/(iter3)
-    lrs3 = [lrs2[-1] - i*(delta2) for i in range(1, iter3+1)]
-    return lrs1+lrs2+lrs3
-
-
 def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, lr_high=1*1e-5):
     seed_everything(42)
     start_time = datetime.datetime.now()
     loss = None
     
     criterion = nn.CrossEntropyLoss()
-    '''
-    exp_num = 1
-    '''
-    #optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
-    #lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=30, gamma=0.1)
-
-    '''
-    exp_num = 2
-    '''
-    optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
-    '''
-    exp_num = 3
-    '''
-    #iterations = num_epochs*len(train_dataloader)
-    #lrs = get_triangular_lr(lr_low, lr_high, iterations)
+    # 사용 가능한 GPU 수 확인
+    num_gpus = torch.cuda.device_count()
+
+    # DataParallel로 모델을 감싸기
+    if num_gpus > 1:
+        print(f"Using {num_gpus} GPUs for DataParallel.")
+        device_ids = [0, 1]
+        model = nn.DataParallel(model, device_ids=device_ids)
+
+    model = model.to(device)
+    model.train()
+    
     if args.aug_strategy == "AA":
         aug_policy = AutoAugmentPolicy("cifar10")
         auto_aug = AutoAugment(aug_policy)
         
     for epoch in range(args.epoch):  
-        model = model.to(device)
+        
         epoch_loss = 0.0
         running_loss = 0.0
         
@@ -95,20 +78,13 @@ def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, 
             labels = labels.to(device)
 
             optimizer.zero_grad()
-            #if args.aug_strategy == "AA":
-            #    image_tensor_uint8 = (inputs * 255).to(torch.uint8)
-            #    image_tensor_uint8 = auto_aug(image_tensor_uint8)
-            #    inputs = image_tensor_uint8.float() / 255.0
-
-            # if args.aug_strategy == "AA":
-                # inputs = auto_aug(inputs)
-
             outputs = model(inputs)
-            if args.model_type == "Resnet":
-                loss = criterion(outputs, labels)
-            elif args.model_type == "ViT":
+            if args.model_type == "ViT":
                 loss = criterion(outputs.logits, labels)
-            
+            elif args.model_type == "Resnet":
+                loss = criterion(outputs, labels)
+            else:
+                loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
             lr_scheduler.step()
@@ -140,10 +116,10 @@ def train(args, model, train_dataloader, test_dataloader, device, lr_low= 1e-7, 
                 images = images.to(device)
                 labels = labels.to(device)
                 outputs = model(images)
-                if args.model_type == "Resnet":
-                    _, predicted = torch.max(outputs, 1)
-                elif args.model_type == "ViT":
+                if args.model_type == "ViT":
                     _, predicted = torch.max(outputs.logits, 1)
+                else: # if args.model_type == "Resnet":
+                    _, predicted = torch.max(outputs, 1)
                 total_te += labels.size(0)
                 correct_te += (predicted == labels).sum().item()
         
@@ -159,6 +135,12 @@ def get_model(args, n_classes):
     
     if args.model_type == "Resnet":
         model = ResNet(args, n_class=n_classes)
+
+    if args.model_type == "wide_resnet_28x10":
+        model = WideResNet(28, n_classes, 10,
+                        droprate=0.3,
+                        use_bn=True, 
+                        use_fixup=True)
 
     elif args.model_type == "ViT":
         if args.pretrained:
