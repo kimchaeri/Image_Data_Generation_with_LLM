@@ -12,18 +12,33 @@ def get_transforms(args):
     'eurosat' : ([0.3444887, 0.38034907, 0.40781093], [0.0900263, 0.061832733, 0.051150024]), 'miniimagenet' : ([0.4733471, 0.44912496, 0.4034593], [0.22521427, 0.2207067, 0.22094156]),
     'caltech101' : ([0.54520583, 0.52520037, 0.4967313], [0.24364278, 0.24105375, 0.24355316]), 
     }
+    
+    if args.aug_strategy:
+        train_transform = transforms.Compose([
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(norm[args.dataset][0], norm[args.dataset][1])
+            ])
 
-    train_transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(norm[args.dataset][0], norm[args.dataset][1])
-        ])
+        test_transform = transforms.Compose([
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(norm[args.dataset][0], norm[args.dataset][1])
+            ])
+    else:
+        train_transform = transforms.Compose([
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(norm[args.dataset][0], norm[args.dataset][1])
+            ])
 
-    test_transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(norm[args.dataset][0], norm[args.dataset][1])
-        ])
+        test_transform = transforms.Compose([
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(norm[args.dataset][0], norm[args.dataset][1])
+            ])
     
     
     if args.aug_strategy == "AA":

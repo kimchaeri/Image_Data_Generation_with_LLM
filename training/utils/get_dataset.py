@@ -93,7 +93,6 @@ def get_dataset(args):
     print("num of total dataset = ", len(train_dataset))
     print(class_name)
     print(len(class_name))
-    
     return train_dataloader, test_dataloader, n_classes, class_name
 
 
